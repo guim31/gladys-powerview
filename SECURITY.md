@@ -30,6 +30,22 @@ Gladys before reporting a problem.
 
 In scope: the code of this repository and the Docker image it publishes.
 
+What the integration handles:
+
+- **No secret.** The local API of the PowerView hubs has no password, no token
+  and no account: the configuration holds hub IP addresses, a language and a
+  refresh interval, nothing else. The PowerView cloud is never contacted.
+- **`/data`** holds `powerview-state.json`: the hubs seen so far (address,
+  generation, name, firmware) with the shade, scene and room entries they
+  answered, so a restart knows them before the first discovery. Deleting it is
+  harmless.
+- **Network**: plain HTTP to the hubs on the local network (port 80, the only
+  protocol they speak), and the mDNS discovery run by the Gladys core for the
+  container. Anyone on that network can drive the shades through the hub, with
+  or without this integration: protect the network, not the hub.
+- Shades are not a security device: nothing here opens a door or disarms an
+  alarm.
+
 Out of scope: Gladys Assistant itself (see its
 [security policy](https://github.com/GladysAssistant/Gladys/security/policy)),
-and the third-party services and devices the integration talks to.
+the PowerView hubs, apps and cloud, and their firmware.

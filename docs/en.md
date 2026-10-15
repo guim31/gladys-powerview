@@ -1,61 +1,191 @@
-# Demo Devices Template
+# PowerView
 
-This is the user documentation of the integration. Gladys re-hosts this file
-and shows a permanent **Documentation** link to it in the Configuration screen
-(in the user's language, with English as the fallback) — it is when
-configuring that the user needs it most. Keep the short onboarding hints in
-the `section` blocks of the manifest `config_schema`; put the long
-step-by-step (screenshots, troubleshooting…) here.
+Control your **Hunter Douglas / Luxaflex PowerView** motorized shades from
+Gladys, locally, through your PowerView hub: open, close, stop, set a
+position, tilt the slats, follow the batteries and run the scenes saved in the
+PowerView app. No cloud account, no internet connection: Gladys talks to the
+hub on your home network, like the PowerView app does.
 
-## What you get
+**Developed without the hardware: feedback welcome.** The integration was
+written from the published PowerView API and the real hub answers used by the
+Home Assistant integration's tests, without a hub at hand. If something does
+not behave as described, please open an issue on GitHub with your hub
+generation and shade model.
 
-Six demo devices show up after installation: a weather station (real data
-from Open-Meteo), a switch, a dimmable light, a smart plug with power
-metering, a motion sensor and a camera.
+This integration is not affiliated with, nor endorsed by, Hunter Douglas or
+Luxaflex. PowerView is a trademark of Hunter Douglas.
+
+## What you need
+
+- A **PowerView hub**: the Generation 2 hub (round, called "PowerView Hub"),
+  or a **Generation 3 gateway** (PowerView Gen 3, "Pro" or "Gateway"). The
+  older Generation 1 hub works too, without the stop command.
+- Shades already paired with the hub in the **PowerView app**. Rooms and
+  scenes are created in the app too: Gladys reads them.
+- Gladys 5.1 or later, on the same network as the hub. The hub needs no
+  password: its local API is open to the home network.
 
 ## Configuration
 
-1. Open the **Configuration** tab of the integration.
-2. Set the **latitude** and **longitude** the demo weather station should
-   observe (they default to Paris), and pick your temperature unit.
-   The **refresh interval** sets how often the weather station and the
-   plug's power are read: every 5 minutes by default, every minute at most.
-3. Save: the devices appear in the **Discovery** tab, ready to be added.
+1. Install the integration from **Integrations → Install from GitHub**, or
+   from the store.
+2. Open its **Configuration** tab. The hubs on the same network as Gladys are
+   found automatically (mDNS). If yours is missing, enter its IP address in
+   **Hub IP addresses** (several addresses separated by commas). For a
+   Generation 3 home with several gateways, the **primary** gateway is
+   enough: the others only relay the radio.
+3. Pick the **language of the feature names** (French by default): Gladys
+   keeps a name once the device is added.
+4. Leave the **refresh interval** at 60 seconds unless you have a reason:
+   it is how often the positions are read from the hub (30 to 600 seconds).
+5. Open the **Discover** tab: every shade and every PowerView scene is
+   listed. Add the ones you want.
 
-The **Prefer the local connection** toggle drives the demo plug: it reports
-the channel it actually uses as a badge (local or cloud), with an orange dot
-when it runs degraded (local refused, cloud fallback).
+Give the hub a fixed IP address in your router: if its address changes, the
+integration looks for it again through mDNS, but a fixed address is the
+surest way.
+
+## What each device offers
+
+### Shades
+
+Each shade is one device, in the **Shutter** category (or **Curtain** for the
+shades that move sideways: Skyline panels, curtains, vertical slats):
+
+- **Open / close**: the open, stop and close buttons of Gladys. The shade
+  shows **open** as soon as it is partly open, **closed** once fully down.
+- **Position**: 0 % is closed, 100 % is open. For a top-down shade (it
+  lowers from the top), 100 % is still "open": the integration turns the
+  value around for you.
+
+After a command, Gladys shows the target position at once; the integration
+then asks the shade where it really is once its motor should have stopped
+(about 40 seconds for a full course).
+
+### Slats (tilt)
+
+Shades with slats or vanes (Silhouette, Pirouette, Twist, Venetian blinds,
+vertical slats, Palm Beach shutters…) get a second slider, **Slat tilt**,
+from 0 to 100 %:
+
+- slats that turn **90°** (Silhouette, Pirouette): 0 % closed, 100 % open;
+- slats that turn **180°** (Venetian, Twist, vertical slats, shutters):
+  50 % is open (horizontal), 0 % and 100 % are closed in either direction.
+
+Some shades only tilt once fully closed (Silhouette, Pirouette): the hub
+handles it. Tilt-only shades (Palm Beach, Everwood) have no position slider:
+open and close turn the slats.
+
+### Two-rail and dual shades
+
+- **Top-down / bottom-up** shades (Duette TDBU): **Bottom rail position**
+  (100 % = the bottom rail up) and **Top rail position** (100 % = the top
+  rail down). One rail never crosses the other: the integration stops it at
+  the other one.
+- **Dual** shades (Duolite, Vignette Duolite, Silhouette Duolite: a sheer in
+  front and a blackout behind, on one motor): **Combined position** (0-50 %
+  the blackout, 51-100 % the sheer, open at 100 %), plus **Sheer (front)
+  position** and **Blackout (rear) position**. The sheer can only open once
+  the blackout is fully up.
+
+### Battery
+
+The shades on batteries (or rechargeable wands) get **Battery** (%) and
+**Low battery** (yes at 20 % or less, handy to trigger a reminder). A
+Generation 2 hub reports the voltage of the pack, a Generation 3 gateway a
+level in four steps (100, 50, 20 and 0 %). Mains-powered shades have no
+battery feature.
+
+### PowerView scenes
+
+Each scene of the PowerView app is a device named "_scene_ (PowerView
+scene)", with a **Run the scene** button. Add the ones you use: they can be
+put on a dashboard, and used in Gladys scenes.
 
 ## Actions
 
-- **Test the weather provider** — performs a live request to Open-Meteo and
-  shows the current temperature and humidity under the button.
-- **Identify a device** — pick one of your devices in the list and it will
-  signal itself (the demo light "blinks" in the logs).
+In the **Configuration** tab:
+
+- **Search for hubs**: looks for the hubs again (after adding a shade or a
+  scene in the PowerView app, for example) and says what each one has:
+  generation, address, number of shades and scenes. A secondary Generation 3
+  gateway, an address that does not answer, an address typed wrong are
+  reported too.
+- **Identify a shade**: pick a shade, it moves up and down a little so you
+  can tell which window it is.
 
 ## Scenes
 
-The integration adds its own cards to the scene editor (Gladys 5.1 or
-later), under the **Integrations** category:
+The integration adds the **Run a PowerView scene** action to the scene
+editor (category **Integrations**). Pick the scene among your devices (the
+ones named "(PowerView scene)"); the action returns **Shades moved**, the
+number of shades the hub moves, for the following actions.
 
-- **Motion detected** (trigger) — starts the scene when a demo motion sensor
-  sees something move. Optionally pick the sensor and what moved (person,
-  animal); left empty, any detection matches. The following actions can
-  read what moved with `{{triggerEvent.data.target}}`.
-- **Identify a device** (action) — makes the chosen device signal itself.
-  It returns whether the device could signal itself, so the following
-  actions can depend on it.
+The shades themselves are ordinary Gladys devices: the **Set device value**
+action opens, closes or sets a position, and the **Device state change** trigger
+reacts to a position or a low battery.
+
+Examples:
+
+- **Wake up gently**: at 7:30 on weekdays, set the bedroom shade to 30 %,
+  then to 100 % fifteen minutes later.
+- **Summer afternoon**: when the outdoor temperature goes above 28 °C, run
+  the "Close South" PowerView scene; open the shades again at sunset.
+- **Battery reminder**: when **Low battery** of a shade turns to yes, send
+  yourself a message to charge it.
 
 ## Dashboard
 
-Add the **Demo status** widget to a dashboard: it shows the live
-temperature of the weather station and the power of the office plug, the
-connection the plug currently uses (orange when degraded) and the observed
-location. Its **Identify the light** button makes the demo light signal
-itself.
+No dedicated widget: the shades and the scenes are devices, and the Gladys
+**Devices** box shows them with their buttons and sliders.
+
+## Refresh and hub load
+
+- Every **refresh interval** (60 seconds by default), the integration reads
+  the shade list of each hub that has a shade added to Gladys. The hub
+  answers from its memory: the shades are **not woken up**, their batteries
+  are spared.
+- **Mains-powered** shades are also asked their real position over the radio,
+  every 10 minutes, one shade at a time (like Home Assistant). Battery shades
+  are never asked on a timer: it would drain them in days. A battery shade
+  moved with a remote therefore shows its new position only once the hub
+  learns it (a Generation 3 gateway usually hears its shades, a Generation 2
+  hub often does not).
+- After a command, the shade is asked once its motor has stopped.
+- Radio operations (moves, stops, scenes) are sent **one at a time** per hub:
+  the hubs are known to crash when they get several at once.
+
+The PowerView API has no published quota; these paces are the ones Home
+Assistant has used for years.
 
 ## Troubleshooting
 
-The integration logs everything it does: check the integration logs from the
-Gladys UI (or `docker logs` on the host) with `LOG_LEVEL=debug` for the full
-detail.
+- **No hub found**: check that Gladys and the hub are on the same network
+  (same subnet), then enter the hub IP address in the configuration and run
+  **Search for hubs**. Some routers filter mDNS between Wi-Fi and wired
+  networks.
+- **The status says the hub does not answer**: a Generation 2 hub reboots
+  every night for a few minutes; the integration waits for it silently. If it
+  lasts, unplug and replug the hub.
+- **A position does not follow the remote**: see "Refresh and hub load"
+  above. Opening the shade from Gladys once resyncs it.
+- **A new shade or scene is missing**: run **Search for hubs**, then open the
+  **Discover** tab.
+- **More detail**: the integration logs only its lifecycle (start, hubs
+  found, lost and back, one line per command). Set `LOG_LEVEL=debug` on the
+  container for the full detail.
+
+## Limits
+
+- Developed without the hardware: the hub answers come from the Home
+  Assistant tests. Feedback welcome.
+- The embedded light of the Aura illuminated shades is not driven.
+- The PowerView schedules (automations) stay in the PowerView app.
+- Gladys has no "tilt" feature: the slats are a second position slider, and
+  voice assistants only see the main position.
+- The Generation 1 hub cannot stop a shade.
+- Generation 3 gateways announce themselves as `_PowerView-G3._tcp`, while
+  Gladys can only look for `_powerview-g3._tcp` (lowercase): they may not be
+  found automatically. Enter the gateway IP address then.
+- Gladys keeps the names and the features of a device once added: a shade
+  re-paired in the PowerView app gets a new id, hence a new device.

@@ -1,8 +1,8 @@
 {
-  "name": "gladys-integration-template-js",
+  "name": "gladys-powerview",
   "version": "1.0.0",
   "private": true,
-  "description": "Official starter template to build an external integration for Gladys Assistant with the JavaScript SDK.",
+  "description": "Gladys Assistant integration for Hunter Douglas / Luxaflex PowerView motorized shades, over the local hub API.",
   "type": "module",
   "main": "index.js",
   "scripts": {

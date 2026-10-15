@@ -12,44 +12,25 @@ the notes of the version's GitHub Release.
 
 ### Added
 
-- A working example of scene triggers, scene actions and dashboard widgets
-  (Gladys 5.1.0 or later).
-- `CHANGELOG.md`, rolled by the Release workflow.
-- A GitHub Release for every version, with its changelog section as notes: the
-  Gladys Supervision page links each version to the repository's releases.
-- CI runs the tests on Node 22 and 24, and builds the Docker image.
-- Dependabot keeps the npm dependencies and the GitHub Actions up to date.
-- `SECURITY.md` (how to report a vulnerability) and `CLAUDE.md` (project rules
-  for contributors and coding assistants).
-- Manifest tests: `version` matches `package.json`, `docker_image` is tagged
-  with it, descriptions hold 10 to 100 characters, placeholders are
-  multi-language objects.
-- The latitude and longitude fields show an example value as placeholder.
+- Hunter Douglas / Luxaflex PowerView motorized shades in Gladys, locally
+  through the hub: Generation 2 hubs, Generation 3 gateways, and Generation 1
+  hubs (without stop). No account, no internet connection.
+- Hubs found automatically through Gladys (mDNS), or by their IP address; a
+  secondary Generation 3 gateway is left to the primary one, and a hub that
+  changes its address is found again.
+- One device per shade: open, close and stop, position (0 % closed, 100 %
+  open, top-down shades included), slat tilt for the shades with slats, both
+  rails of the top-down/bottom-up shades, combined, front and rear positions of
+  the dual shades (Duolite), battery level and low battery for the shades on
+  batteries. Curtains and vertical slats show as curtains.
+- One device per PowerView scene, with a button that runs it, and the "Run a
+  PowerView scene" scene action, which returns the number of shades moved.
+- "Search for hubs" and "Identify a shade" actions in the Configuration screen.
+- The positions refresh by themselves (every 60 seconds by default) without
+  waking the shades on batteries; mains-powered shades are asked their real
+  position every 10 minutes; after a command, the target shows at once and the
+  shade is asked once it has arrived. Radio commands reach a hub one at a time.
+- English, French, German and Spanish, for the configuration, the messages,
+  the feature names and the documentation.
 
-### Changed
-
-- Node.js 22 or later is required (Node 20 is end-of-life).
-- Integration SDK 0.15.0. The tests now run against the fake Gladys of the
-  SDK, which refuses the payloads Gladys refuses.
-- The refresh interval is one minute minimum, the fastest Gladys polls a
-  device. The plug's power is only sent when it changes, and every 30
-  minutes otherwise.
-
-### Fixed
-
-- Gladys refused the devices of the Discovery tab: the weather station and
-  the plug declared their poll frequency in seconds instead of one of the
-  values Gladys accepts, and were never polled. They now poll every minute,
-  and the readings follow the refresh interval of the configuration.
-
-- The release commit no longer fails `npm run format:check`: the Release
-  workflow updates the manifest `version` and `docker_image` in place instead
-  of re-printing the whole file with `jq`.
-- The integration can write to `/data`: the image creates the directory owned
-  by the `node` user, a new Docker volume was owned by root.
-- A sub-container running the integration's own image follows it to the new
-  tag at each release, as well as in the manifest of the build summary: it kept
-  the previous tag, which may not exist on the registry. Sub-containers on a
-  third-party image (a broker, a database...) keep theirs.
-
-[Unreleased]: https://github.com/GladysAssistant/integration-template-js/commits/main
+[Unreleased]: https://github.com/guim31/gladys-powerview/commits/main
