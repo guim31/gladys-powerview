@@ -10,6 +10,8 @@ the notes of the version's GitHub Release.
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-15
+
 ### Added
 
 - Hunter Douglas / Luxaflex PowerView motorized shades in Gladys, locally
@@ -33,4 +35,5 @@ the notes of the version's GitHub Release.
 - English, French, German and Spanish, for the configuration, the messages,
   the feature names and the documentation.
 
-[Unreleased]: https://github.com/guim31/gladys-powerview/commits/main
+[Unreleased]: https://github.com/guim31/gladys-powerview/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/guim31/gladys-powerview/releases/tag/v1.0.1
