@@ -10,36 +10,75 @@
 // rest of the code never has to deal with `undefined`.
 // -----------------------------------------------------------------------------
 
+/** The languages of the Gladys interface, for the texts the container writes. */
+export const LANGUAGES = ['en', 'fr', 'de', 'es'];
+
+// Bounds of the refresh interval, in seconds. Reading the shade list answers
+// from the hub's memory (no radio): once a minute is what Home Assistant does,
+// 30 s keeps a hub comfortable.
+export const REFRESH_MIN_SECONDS = 30;
+export const REFRESH_MAX_SECONDS = 600;
+
 // Defaults: they MUST stay consistent with the `default` values declared in the
 // `config_schema` of the manifest.
 export const DEFAULT_CONFIG = {
-  latitude: 48.8566, // Paris
-  longitude: 2.3522,
-  unit: 'celsius', // 'celsius' | 'fahrenheit'
-  // Seconds between two reads of the polled sensors. Gladys polls at most once
-  // a minute: slower intervals are applied by skipping polls (see
-  // createPoller in src/devices/index.js).
-  poll_frequency: 300,
-  // Reserved key (NOT in config_schema): because the manifest declares both
-  // 'local' and 'cloud' in its `transports` field, Gladys shows a standard
-  // "Prefer the local connection" toggle and sends the user's choice here.
-  // Read-only for the integration; defaults to true.
-  GLADYS_PREFER_LOCAL: true,
+  // Hub addresses typed by the user, for the hubs mDNS does not find.
+  hub_addresses: '',
+  // Language of the device and feature names the integration creates.
+  language: 'fr',
+  // Seconds between two reads of the shade positions.
+  refresh_interval: 60,
 };
+
+// An IPv4 address or a host name, with an optional port.
+const HOST =
+  /^(?:\d{1,3}(?:\.\d{1,3}){3}|[a-z0-9](?:[a-z0-9-]{0,62})(?:\.[a-z0-9-]{1,63})*)(?::\d{1,5})?$/i;
+
+/**
+ * Split the typed addresses: commas, semicolons or spaces between them; a
+ * scheme or a trailing path (pasted from a browser) is dropped.
+ * @param {unknown} value
+ * @returns {{ hosts: string[], invalid: string[] }}
+ */
+export function parseHosts(value) {
+  const hosts = [];
+  const invalid = [];
+  for (const part of String(value ?? '').split(/[\s,;]+/)) {
+    const host = part
+      .trim()
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/.*$/, '')
+      .toLowerCase();
+    if (host === '') {
+      continue;
+    }
+    const octetsOk =
+      !/^\d+(\.\d+){3}/.test(host) || host.split(/[.:]/, 4).every((n) => Number(n) <= 255);
+    if (HOST.test(host) && octetsOk) {
+      if (!hosts.includes(host)) {
+        hosts.push(host);
+      }
+    } else {
+      invalid.push(part.trim());
+    }
+  }
+  return { hosts, invalid };
+}
 
 /**
  * Merge the user config with the defaults.
  * @param {Record<string, unknown>} raw config returned by the SDK
  */
 export function normalizeConfig(raw = {}) {
+  const { hosts, invalid } = parseHosts(raw.hub_addresses);
+  const interval = Math.round(Number(raw.refresh_interval ?? DEFAULT_CONFIG.refresh_interval));
   return {
-    ...DEFAULT_CONFIG,
-    ...raw,
-    // Force the types: config may arrive as strings from a form.
-    latitude: Number(raw.latitude ?? DEFAULT_CONFIG.latitude),
-    longitude: Number(raw.longitude ?? DEFAULT_CONFIG.longitude),
-    poll_frequency: Number(raw.poll_frequency ?? DEFAULT_CONFIG.poll_frequency),
-    // The preference is a boolean; anything but an explicit false means true.
-    GLADYS_PREFER_LOCAL: raw.GLADYS_PREFER_LOCAL !== false,
+    hub_addresses: String(raw.hub_addresses ?? DEFAULT_CONFIG.hub_addresses),
+    hosts,
+    invalidHosts: invalid,
+    language: LANGUAGES.includes(raw.language) ? raw.language : DEFAULT_CONFIG.language,
+    refresh_interval: Number.isFinite(interval)
+      ? Math.min(REFRESH_MAX_SECONDS, Math.max(REFRESH_MIN_SECONDS, interval))
+      : DEFAULT_CONFIG.refresh_interval,
   };
 }

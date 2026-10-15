@@ -1,177 +1,223 @@
 {
   "manifest_version": 1,
   "type": "device",
-  "name": "Demo Devices Template",
+  "name": "PowerView",
   "description": {
-    "en": "Starter template showing sensors, a switch, a dimmable light and a smart plug.",
-    "fr": "Template de démarrage : capteurs, interrupteur, lampe variable et prise connectée."
+    "en": "Hunter Douglas / Luxaflex PowerView motorized shades, locally: position, slats, scenes.",
+    "fr": "Stores motorisés Hunter Douglas / Luxaflex PowerView, en local : position, lamelles, scènes.",
+    "de": "Motorisierte Hunter-Douglas-/Luxaflex-PowerView-Jalousien, lokal: Position, Lamellen, Szenen.",
+    "es": "Persianas motorizadas Hunter Douglas / Luxaflex PowerView, en local: posición, lamas, escenas."
   },
   "version": "1.0.0",
-  "docker_image": "ghcr.io/gladysassistant/integration-template-js:1.0.0",
+  "docker_image": "ghcr.io/guim31/gladys-powerview:1.0.0",
   "gladys_version": ">=5.1.0",
-  "cover_image": "https://raw.githubusercontent.com/GladysAssistant/integration-template-js/master/cover.png",
-  "categories": ["lighting", "security", "environment"],
-  "transports": ["local", "cloud"],
+  "cover_image": "https://raw.githubusercontent.com/guim31/gladys-powerview/main/cover.png",
+  "categories": ["lighting"],
+  "transports": ["local"],
+  "network_discovery": [
+    { "type": "mdns", "service": "_powerview._tcp" },
+    { "type": "mdns", "service": "_powerview-g3._tcp" }
+  ],
   "config_schema": [
     {
       "key": "intro",
       "type": "section",
-      "label": { "en": "Getting started", "fr": "Pour commencer" },
+      "label": {
+        "en": "Finding your hub",
+        "fr": "Trouver votre hub",
+        "de": "Deinen Hub finden",
+        "es": "Encontrar su hub"
+      },
       "description": {
-        "en": "The demo weather station reads real data from the free Open-Meteo API: pick the coordinates to observe. No account, no API key.",
-        "fr": "La station météo de démonstration lit de vraies données via l'API gratuite Open-Meteo : choisissez les coordonnées à observer. Pas de compte, pas de clé d'API."
+        "en": "PowerView hubs (Generation 2) and gateways (Generation 3) on the same network as Gladys are found automatically: open the Discover tab. If yours is missing, enter its IP address below (shown in your router, or in the PowerView app).",
+        "fr": "Les hubs PowerView (génération 2) et passerelles (génération 3) du même réseau que Gladys sont trouvés automatiquement : ouvrez l'onglet Découverte. S'il manque le vôtre, saisissez son adresse IP ci-dessous (visible dans votre box, ou dans l'application PowerView).",
+        "de": "PowerView-Hubs (Generation 2) und -Gateways (Generation 3) im selben Netzwerk wie Gladys werden automatisch gefunden: Öffne den Tab „Entdecken“. Fehlt deiner, gib unten seine IP-Adresse ein (in deinem Router oder in der PowerView-App zu sehen).",
+        "es": "Los hubs PowerView (generación 2) y pasarelas (generación 3) de la misma red que Gladys se encuentran automáticamente: abra la pestaña Descubrir. Si falta el suyo, introduzca su dirección IP a continuación (visible en su router o en la aplicación PowerView)."
       },
       "links": [
         {
-          "url": "https://open-meteo.com/en/docs",
-          "label": { "en": "Open-Meteo documentation", "fr": "Documentation Open-Meteo" }
+          "url": "https://github.com/guim31/gladys-powerview/blob/main/docs/en.md",
+          "label": {
+            "en": "Setup guide",
+            "fr": "Guide d'installation",
+            "de": "Installationsanleitung",
+            "es": "Guía de instalación"
+          }
         }
       ]
     },
     {
-      "key": "latitude",
-      "type": "number",
-      "label": { "en": "Latitude", "fr": "Latitude" },
-      "description": {
-        "en": "Latitude used for the demo weather sensor.",
-        "fr": "Latitude utilisée par le capteur météo de démonstration."
+      "key": "hub_addresses",
+      "type": "string",
+      "label": {
+        "en": "Hub IP addresses",
+        "fr": "Adresses IP des hubs",
+        "de": "IP-Adressen der Hubs",
+        "es": "Direcciones IP de los hubs"
       },
-      "placeholder": { "en": "e.g. 48.8566", "fr": "ex. 48.8566" },
-      "required": true,
-      "default": 48.8566,
-      "min": -90,
-      "max": 90
+      "description": {
+        "en": "Optional, separated by commas. Only needed for the hubs automatic discovery does not find. For a Generation 3 home with several gateways, the primary gateway is enough.",
+        "fr": "Facultatif, séparées par des virgules. Seulement pour les hubs que la découverte automatique ne trouve pas. Pour une maison de génération 3 à plusieurs passerelles, la passerelle principale suffit.",
+        "de": "Optional, durch Kommas getrennt. Nur für Hubs nötig, die die automatische Erkennung nicht findet. Bei einem Zuhause der Generation 3 mit mehreren Gateways genügt das primäre Gateway.",
+        "es": "Opcional, separadas por comas. Solo para los hubs que el descubrimiento automático no encuentra. En una casa de generación 3 con varias pasarelas, basta con la pasarela principal."
+      },
+      "placeholder": {
+        "en": "e.g. 192.168.1.40",
+        "fr": "ex. 192.168.1.40",
+        "de": "z. B. 192.168.1.40",
+        "es": "p. ej. 192.168.1.40"
+      },
+      "required": false,
+      "default": ""
     },
     {
-      "key": "longitude",
+      "key": "refresh_interval",
       "type": "number",
-      "label": { "en": "Longitude", "fr": "Longitude" },
-      "description": {
-        "en": "Longitude used for the demo weather sensor.",
-        "fr": "Longitude utilisée par le capteur météo de démonstration."
+      "label": {
+        "en": "Refresh interval (seconds)",
+        "fr": "Intervalle de rafraîchissement (secondes)",
+        "de": "Aktualisierungsintervall (Sekunden)",
+        "es": "Intervalo de actualización (segundos)"
       },
-      "placeholder": { "en": "e.g. 2.3522", "fr": "ex. 2.3522" },
-      "required": true,
-      "default": 2.3522,
-      "min": -180,
-      "max": 180
+      "description": {
+        "en": "How often the shade positions are read from the hub, 30 to 600 seconds. The hub answers from its memory without waking the shades: their batteries are spared.",
+        "fr": "Fréquence de lecture des positions des stores sur le hub, de 30 à 600 secondes. Le hub répond de mémoire sans réveiller les stores : leurs batteries sont épargnées.",
+        "de": "Wie oft die Positionen der Jalousien vom Hub gelesen werden, 30 bis 600 Sekunden. Der Hub antwortet aus seinem Speicher, ohne die Jalousien zu wecken: Das schont ihre Batterien.",
+        "es": "Frecuencia de lectura de las posiciones de las persianas en el hub, de 30 a 600 segundos. El hub responde de memoria sin despertar las persianas: sus baterías se conservan."
+      },
+      "required": false,
+      "default": 60,
+      "min": 30,
+      "max": 600
     },
     {
-      "key": "unit",
+      "key": "language",
       "type": "select",
-      "label": { "en": "Temperature unit", "fr": "Unité de température" },
-      "required": false,
-      "default": "celsius",
-      "options": [
-        { "value": "celsius", "label": { "en": "Celsius", "fr": "Celsius" } },
-        { "value": "fahrenheit", "label": { "en": "Fahrenheit", "fr": "Fahrenheit" } }
-      ]
-    },
-    {
-      "key": "poll_frequency",
-      "type": "number",
-      "label": { "en": "Refresh interval (s)", "fr": "Intervalle de rafraîchissement (s)" },
+      "label": {
+        "en": "Language of the feature names",
+        "fr": "Langue des noms de fonctionnalités",
+        "de": "Sprache der Funktionsnamen",
+        "es": "Idioma de los nombres de las funciones"
+      },
       "description": {
-        "en": "How often sensors are polled, in seconds (one minute minimum).",
-        "fr": "Fréquence d'interrogation des capteurs, en secondes (une minute minimum)."
+        "en": "Used for the names of the devices added from now on (Gladys keeps a name once the device is added).",
+        "fr": "Utilisée pour les noms des appareils ajoutés à partir de maintenant (Gladys garde un nom une fois l'appareil ajouté).",
+        "de": "Gilt für die Namen der ab jetzt hinzugefügten Geräte (Gladys behält einen Namen, sobald das Gerät hinzugefügt ist).",
+        "es": "Se usa para los nombres de los dispositivos añadidos a partir de ahora (Gladys conserva un nombre una vez añadido el dispositivo)."
       },
       "required": false,
-      "default": 300,
-      "min": 60,
-      "max": 3600
+      "default": "fr",
+      "options": [
+        {
+          "value": "en",
+          "label": { "en": "English", "fr": "Anglais", "de": "Englisch", "es": "Inglés" }
+        },
+        {
+          "value": "fr",
+          "label": { "en": "French", "fr": "Français", "de": "Französisch", "es": "Francés" }
+        },
+        {
+          "value": "de",
+          "label": { "en": "German", "fr": "Allemand", "de": "Deutsch", "es": "Alemán" }
+        },
+        {
+          "value": "es",
+          "label": { "en": "Spanish", "fr": "Espagnol", "de": "Spanisch", "es": "Español" }
+        }
+      ]
     }
   ],
   "actions": [
     {
-      "key": "test_weather",
-      "label": { "en": "Test the weather provider", "fr": "Tester le fournisseur météo" },
-      "timeout_seconds": 30
+      "key": "search",
+      "label": {
+        "en": "Search for hubs",
+        "fr": "Rechercher les hubs",
+        "de": "Nach Hubs suchen",
+        "es": "Buscar los hubs"
+      },
+      "description": {
+        "en": "Looks for the hubs again and says what each one has: generation, address, shades, scenes.",
+        "fr": "Recherche à nouveau les hubs et indique ce que chacun a : génération, adresse, stores, scènes.",
+        "de": "Sucht erneut nach den Hubs und zeigt, was jeder hat: Generation, Adresse, Jalousien, Szenen.",
+        "es": "Vuelve a buscar los hubs e indica lo que tiene cada uno: generación, dirección, persianas, escenas."
+      },
+      "timeout_seconds": 60
     },
     {
       "key": "identify",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "fields": [
-        {
-          "key": "device",
-          "type": "select",
-          "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
-          "required": true
-        }
-      ]
-    }
-  ],
-  "scene_triggers": [
-    {
-      "key": "motion_detected",
-      "label": { "en": "Motion detected", "fr": "Mouvement détecté" },
-      "description": {
-        "en": "A demo motion sensor saw a person or an animal move.",
-        "fr": "Un détecteur de démonstration a vu bouger une personne ou un animal."
+      "label": {
+        "en": "Identify a shade",
+        "fr": "Identifier un store",
+        "de": "Eine Jalousie identifizieren",
+        "es": "Identificar una persiana"
       },
+      "description": {
+        "en": "The shade moves up and down a little, so you can tell which window it is.",
+        "fr": "Le store monte et descend un peu, pour savoir de quelle fenêtre il s'agit.",
+        "de": "Die Jalousie fährt kurz hoch und runter, damit du siehst, welches Fenster es ist.",
+        "es": "La persiana sube y baja un poco, para saber de qué ventana se trata."
+      },
+      "timeout_seconds": 30,
       "fields": [
         {
           "key": "device",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Sensor", "fr": "Détecteur" }
-        },
-        {
-          "key": "target",
-          "type": "multi_select",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" },
-          "options": [
-            { "value": "person", "label": { "en": "Person", "fr": "Personne" } },
-            { "value": "animal", "label": { "en": "Animal", "fr": "Animal" } }
-          ]
-        }
-      ],
-      "variables": [
-        {
-          "key": "target",
-          "type": "string",
-          "label": { "en": "What moved", "fr": "Ce qui a bougé" }
+          "label": { "en": "Shade", "fr": "Store", "de": "Jalousie", "es": "Persiana" },
+          "required": true
         }
       ]
     }
   ],
   "scene_actions": [
     {
-      "key": "identify_device",
-      "label": { "en": "Identify a device", "fr": "Identifier un appareil" },
-      "description": {
-        "en": "Make a device signal itself (the demo light blinks).",
-        "fr": "Fait se signaler un appareil (la lampe de démonstration clignote)."
+      "key": "activate_scene",
+      "label": {
+        "en": "Run a PowerView scene",
+        "fr": "Lancer une scène PowerView",
+        "de": "Eine PowerView-Szene starten",
+        "es": "Ejecutar una escena PowerView"
       },
-      "timeout_seconds": 15,
+      "description": {
+        "en": "Runs a scene saved in the PowerView app: each of its shades goes to its position.",
+        "fr": "Lance une scène enregistrée dans l'application PowerView : chacun de ses stores rejoint sa position.",
+        "de": "Startet eine in der PowerView-App gespeicherte Szene: Jede ihrer Jalousien fährt in ihre Position.",
+        "es": "Ejecuta una escena guardada en la aplicación PowerView: cada una de sus persianas va a su posición."
+      },
+      "timeout_seconds": 30,
       "fields": [
         {
-          "key": "device",
+          "key": "scene",
           "type": "select",
           "source": "devices",
-          "label": { "en": "Device", "fr": "Appareil" },
+          "label": {
+            "en": "PowerView scene",
+            "fr": "Scène PowerView",
+            "de": "PowerView-Szene",
+            "es": "Escena PowerView"
+          },
+          "description": {
+            "en": "The scenes are the devices named \"(PowerView scene)\": add them from the Discover tab first.",
+            "fr": "Les scènes sont les appareils nommés « (scène PowerView) » : ajoutez-les d'abord depuis l'onglet Découverte.",
+            "de": "Die Szenen sind die Geräte mit „(PowerView-Szene)“ im Namen: Füge sie zuerst im Tab „Entdecken“ hinzu.",
+            "es": "Las escenas son los dispositivos llamados «(escena PowerView)»: añádalos primero desde la pestaña Descubrir."
+          },
           "required": true
         }
       ],
       "outputs": [
         {
-          "key": "signalled",
-          "type": "boolean",
-          "label": { "en": "Device signalled", "fr": "Appareil signalé" }
+          "key": "shade_count",
+          "type": "number",
+          "label": {
+            "en": "Shades moved",
+            "fr": "Stores déplacés",
+            "de": "Bewegte Jalousien",
+            "es": "Persianas movidas"
+          }
         }
       ]
-    }
-  ],
-  "widgets": [
-    {
-      "key": "demo_status",
-      "label": { "en": "Demo status", "fr": "État de la démo" },
-      "description": {
-        "en": "Live temperature and plug power, plug connection and observed location.",
-        "fr": "Température et puissance en direct, connexion de la prise, position observée."
-      },
-      "icon": "activity",
-      "action_timeout_seconds": 15
     }
   ]
 }

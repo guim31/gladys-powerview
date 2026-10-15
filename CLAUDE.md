@@ -5,7 +5,9 @@ contributors.
 
 ## What this is
 
-A Gladys Assistant **external integration**: a Node.js service (Node 22+, ESM,
+A Gladys Assistant **external integration** for Hunter Douglas / Luxaflex
+**PowerView** motorized shades, over the local API of the PowerView hub: a
+Node.js service (Node 22+, ESM,
 no build step) that runs in its own sandboxed Docker container and talks to
 Gladys through
 [`@gladysassistant/integration-sdk`](https://github.com/GladysAssistant/integration-sdk-js),
@@ -31,16 +33,22 @@ pushing.
 ## Architecture
 
 ```
-index.js                          SDK wiring only: handlers registered before connect()
-src/devices/index.js              registry of the device blueprints + dispatch helpers
-src/devices/<type>.js             one device type per file (buildDevice, onPoll, onSetValue...)
+index.js                          SDK wiring only: src/app.js registers the handlers before connect()
+src/app.js                        handlers (scan, setValue, poll, device created, config, actions, scene actions)
+src/hub.js                        runtime: discovery, refresh timer, radio queue per hub, commands, status
+src/devices.js                    PowerView shade / scene -> Gladys devices, states, moves (feature keys)
+src/powerview/client.js           HTTP client of the hubs: Gen 1-2 (/api) and Gen 3 (/home, /gateway)
+src/powerview/shade.js            shade kinds (aiopvapi tables), position conversions, batteries
+src/discovery.js                  mDNS results of the core (mediated discovery)
+src/store.js                      /data/powerview-state.json (hubs, shades, scenes, rooms)
 src/scenes.js                     scene action handlers (manifest `scene_actions`)
-src/widgets.js                    dashboard widget handlers (manifest `widgets`)
 src/config.js                     DEFAULT_CONFIG (mirrors the manifest defaults) + normalization
-src/weather.js                    example driver (Open-Meteo)
-gladys-assistant-integration.json manifest: name, config_schema, actions, image...
-docs/en.md, docs/fr.md            user documentation, re-hosted by Gladys (mandatory)
-test/                             node --test, against the SDK's fake Gladys (integration-sdk/testing)
+src/i18n.js                       every text, in en / fr / de / es
+scripts/probe.mjs                 read-only probe of a real hub (run from the hub's network)
+gladys-assistant-integration.json manifest: name, config_schema, actions, scene actions...
+docs/{en,fr,de,es}.md             user documentation, re-hosted by Gladys (same sections)
+test/                             node --test, against the SDK's fake Gladys + simulated hubs
+test/fixtures/powerview/          real hub answers (aiopvapi, BSD-3), anonymized
 .github/scripts/release.mjs       release helpers (manifest bump, changelog), tested in test/
 ```
 
@@ -70,8 +78,9 @@ test/                             node --test, against the SDK's fake Gladys (in
   `type: "provider"`: 5.1.0). `test/manifest.test.js` ties the manifest to the
   code (defaults, action, scene and widget handlers): change both sides
   together.
-- **User-facing text** is bilingual (English and French): action messages,
-  manifest texts, and `docs/en.md` / `docs/fr.md`, kept in sync.
+- **User-facing text** exists in English, French, German and Spanish: action
+  messages, manifest texts, feature names, and `docs/en.md`, `docs/fr.md`,
+  `docs/de.md`, `docs/es.md`, kept in sync (`test/i18n.test.js`).
 - **Style.** Prettier formats, ESLint catches mistakes. Comments explain why,
   in English. Tests never touch the network.
 
@@ -233,3 +242,58 @@ long, et sur un « Sie »/« Ihr… » de politesse en allemand. Le store exige 
 - Docs `en`, `fr`, `de`, `es` avec les mêmes sections.
 - Chauffe, ouverture, sécurité : ne rien rendre pilotable « comme un thermostat » ou par un assistant
   vocal quand une erreur serait dangereuse (leçon d'OctoPrint).
+
+---
+
+# PowerView (propre à cette intégration)
+
+## API des hubs
+
+- **Deux dialectes**, choisis à la détection (`detectHub`) : `GET /api/fwversion` (génération 1-2,
+  `mainProcessor.revision` = version d'API 1 ou 2), sinon `GET /gateway/info` (génération 3). Un 404
+  veut dire « pas ce dialecte » ; une absence de réponse arrête la détection (pas 2 × 15 s).
+- **Positions** : Gen 1-2 en entiers 0..65535 dans deux emplacements (`posKind1`/`position1`,
+  `posKind2`/`position2`, kind 1 = rail principal, 2 = secondaire, 3 = lamelles) ; Gen 3 en fractions
+  0..1 sous `primary`, `secondary`, `tilt`. Tout le code travaille en pourcentages (0 = fermé,
+  100 = ouvert, comme le `openPercent` du cœur) ; la conversion est dans `src/powerview/shade.js`.
+- **Pièges repris d'aiopvapi**, figés par `test/shade.test.js` : un Duette Gen 2 sous 0,75 % est
+  fermé ; une inclinaison 90° utilise la moitié de la plage Gen 1-2 ; un store « lamelles seules »
+  rapporte ses lamelles dans l'emplacement principal (home-assistant/core#115257) ; le type 44 (Twist)
+  annonce la capacité 0 mais s'incline ; `batteryKind: "unassigned"` avec une tension de 0 = rien
+  de connu (pas de batterie publiée, sinon une fausse alerte « batterie faible »).
+- **Lire `/api/shades` ou `/home/shades` ne réveille pas les stores** (réponse de mémoire du hub).
+  `?refresh=true`, les mouvements, l'arrêt, le jog et les scènes passent par la radio : **une
+  opération radio à la fois par hub** (Home Assistant a vu des hubs planter), et jamais de
+  `?refresh=true` périodique sur un store à piles (il serait vidé en quelques jours) — seulement sur
+  les stores sur secteur, toutes les 10 minutes, un par cycle.
+- **423** = hub en maintenance (redémarrage nocturne des Gen 2) : niveau debug, pas une panne.
+- **Gen 3 multi-passerelles** : seule la passerelle principale (`mgwConfig.primary`) se pilote ; les
+  secondaires sont signalées dans le rapport de recherche, jamais publiées.
+- **Gen 1** : pas d'arrêt dans l'API (la commande échoue avec un message clair).
+
+## Choix de conception
+
+- Identifiants : `shade:<numéro de série du hub>-<id du store>`, `scene:<série>-<id de scène>`. Les
+  clés de fonctionnalités (`state`, `position`, `top_position`, `front_position`, `rear_position`,
+  `tilt`, `battery`, `battery_low`, `activate`) sont définitives.
+- Les lamelles sont une **seconde `shutter/position`** : le cœur n'a pas de type « inclinaison ».
+- **Une scène PowerView = un appareil** à bouton `button/push`. La seule liste dynamique qu'une action
+  de scène du manifeste peut proposer est `source: "devices"` : c'est ce qui donne à « Lancer une
+  scène PowerView » sa liste. Un `text/select` sur un appareil « hub » a été écarté : on ne peut pas
+  relancer la scène déjà sélectionnée depuis le tableau de bord.
+- Pas de widget ni de déclencheur : les états sont des fonctionnalités d'appareil.
+
+## Pièges découverts ici
+
+- **Le cœur parcourt le mDNS en respectant la casse** (`networkDiscovery.scanMdns.js` de la 5.2.1 :
+  `record.name.endsWith(...)` et `includes`), et le schéma du manifeste n'accepte que des services
+  en minuscules (`^_[a-z0-9-]+\._(tcp|udp)$`). Une passerelle Gen 3 qui s'annonce
+  `_PowerView-G3._tcp` risque donc de ne pas être trouvée : l'adresse IP saisie reste le repli, et
+  c'est documenté. À remonter au cœur (comparaison insensible à la casse) si le terrain le confirme.
+- **`scanNetwork` peut être refusé** (403 sur un cœur qui ne connaît pas la découverte médiée) : le
+  traiter comme « mDNS indisponible », jamais comme un échec de démarrage (bogue trouvé par
+  `test/hub.test.js`).
+- **Le heartbeat de `publishChangedStates` se date avec `Date.now()`**, pas avec l'horloge injectée :
+  le tester avec `t.mock.timers.enable({ apis: ['Date'] })`.
+- Le faux Gladys du SDK attend les écouteurs `connected` : un test qui appelle une action avant
+  `connect()` reste bloqué sur `whenReady`.
